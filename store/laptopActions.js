@@ -1,4 +1,8 @@
-import { describeLaptopEntry, validateLaptopEntry } from "@/lib/laptopService";
+import {
+  describeLaptopEntry,
+  validateLaptopEntry,
+  resolveStatusForHolder,
+} from "@/lib/laptopService";
 import { createLaptopEntry, createLogEntry } from "@/lib/models";
 import {
   allLaptopsDeleted,
@@ -6,6 +10,7 @@ import {
   laptopEntrySaved,
   saveState,
 } from "@/store/slices/hrisSlice";
+import { findEmployeeByNip } from "@/lib/utils";
 
 // entryId === null → tambah baru
 export const saveLaptopEntry =
@@ -17,7 +22,14 @@ export const saveLaptopEntry =
     if (entryId !== null && !existingEntry)
       return { success: false, errorMessage: "Data tidak ditemukan." };
 
-    const entry = createLaptopEntry({ ...formData, id: existingEntry?.id });
+    const holder = findEmployeeByNip(employees, formData.NIP);
+    const resolvedStatus = resolveStatusForHolder(holder, formData.Status);
+    const entry = createLaptopEntry({
+      ...formData,
+      Status: resolvedStatus,
+      id: existingEntry?.id,
+    });
+
     const errorMessage = validateLaptopEntry(
       laptops,
       employees,
@@ -37,7 +49,11 @@ export const saveLaptopEntry =
 
     dispatch(laptopEntrySaved({ entry, logEntry }));
     dispatch(saveState());
-    return { success: true, isNew: !existingEntry };
+    return {
+      success: true,
+      isNew: !existingEntry,
+      wasStatusAdjusted: resolvedStatus !== formData.Status,
+    };
   };
 
 export const deleteLaptopEntry = (entryId) => (dispatch, getState) => {

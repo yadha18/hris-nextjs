@@ -3,6 +3,7 @@ import { DEFAULT_JABATAN } from "@/lib/config";
 import { runEmployeeMaintenance } from "@/lib/employeeMaintenance";
 import { normalizeLoadedLembur } from "@/lib/lemburService";
 import { normalizeLoadedLaptops } from "@/lib/laptopService";
+import { syncLaptopStatusWithResignedEmployees } from "@/lib/laptopService";
 
 const STATE_ENDPOINT = "/api/state";
 
@@ -203,6 +204,10 @@ const hrisSlice = createSlice({
       const { listKey, name } = action.payload;
       state[listKey] = state[listKey].filter((item) => item.nama !== name);
     },
+    laptopStatusesSynced(state, action) {
+      state.laptop = action.payload.laptops;
+      state.log.push(...action.payload.logEntries);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -268,6 +273,7 @@ export const {
   allLaptopsDeleted,
   namedListItemAdded,
   namedListItemRemoved,
+  laptopStatusesSynced,
 } = hrisSlice.actions;
 
 // Pengganti UI.init(): muat data → rawat data → simpan jika ada perubahan
@@ -284,9 +290,18 @@ export const initializeState = createAsyncThunk(
           logEntries: maintenance.logEntries,
         }),
       );
-      dispatch(saveState());
     }
-    return maintenance.summary;
+
+    const { laptop, karyawan } = getState().hris;
+    const laptopSync = syncLaptopStatusWithResignedEmployees(laptop, karyawan);
+    if (laptopSync.syncedCount > 0) dispatch(laptopStatusesSynced(laptopSync));
+
+    if (maintenance.hasChanges || laptopSync.syncedCount > 0)
+      dispatch(saveState());
+    return {
+      ...maintenance.summary,
+      syncedLaptopCount: laptopSync.syncedCount,
+    };
   },
 );
 

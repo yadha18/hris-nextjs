@@ -126,13 +126,14 @@ export default function EditLaptopModal({ entryId, prefillNip }) {
     if (!result.success)
       return dispatch(showToast(`❌ ${result.errorMessage}`, 5000));
 
-    dispatch(
-      showToast(
-        result.isNew
-          ? "✅ Data laptop berhasil ditambahkan"
-          : "✅ Data laptop berhasil diperbarui",
-      ),
-    );
+    const baseMessage = result.isNew
+      ? "✅ Data laptop berhasil ditambahkan"
+      : "✅ Data laptop berhasil diperbarui";
+    const adjustedNote = result.wasStatusAdjusted
+      ? ' Status otomatis menjadi "Belum Dikembalikan" karena karyawan Resign.'
+      : "";
+
+    dispatch(showToast(baseMessage + adjustedNote, adjustedNote ? 5000 : 3000));
     dispatch(closeModal());
   };
 

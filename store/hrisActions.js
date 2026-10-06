@@ -15,9 +15,18 @@ import {
   saveState,
   slotConfigUpdated,
   uploadApplied,
+  laptopStatusesSynced,
 } from "@/store/slices/hrisSlice";
 import { UPLOAD_TYPES } from "@/lib/upload/uploadRegistry";
 import { navigateTo, openLemburMonth, showToast } from "@/store/slices/uiSlice";
+import { syncLaptopStatusWithResignedEmployees } from "@/lib/laptopService";
+
+const syncResignedLaptops = () => (dispatch, getState) => {
+  const { laptop, karyawan } = getState().hris;
+  const result = syncLaptopStatusWithResignedEmployees(laptop, karyawan);
+  if (result.syncedCount > 0) dispatch(laptopStatusesSynced(result));
+  return result.syncedCount;
+};
 
 export const saveEmployee =
   ({ employeeId, formData, statusData }) =>
@@ -41,8 +50,9 @@ export const saveEmployee =
       );
     }
 
+    const syncedLaptopCount = dispatch(syncResignedLaptops());
     dispatch(saveState());
-    return { success: true };
+    return { success: true, syncedLaptopCount };
   };
 
 export const deleteEmployee = (employeeId) => (dispatch, getState) => {
@@ -127,6 +137,7 @@ export const confirmUpload =
     );
 
     dispatch(uploadApplied(changes));
+    dispatch(syncResignedLaptops());
     dispatch(saveState());
     dispatch(showToast(toast.message, toast.durationMs));
 

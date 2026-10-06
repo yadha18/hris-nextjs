@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { initializeState } from '@/store/slices/hrisSlice';
-import { showToast } from '@/store/slices/uiSlice';
-import DashboardPage from './dashboard/DashboardPage';
-import JabatanPage from './settings/JabatanPage';
-import KaryawanPage from './karyawan/KaryawanPage';
-import LaptopDashboardPage from './laptop/LaptopDashboardPage';
-import LaptopTablePage from './laptop/LaptopTablePage';
-import LemburBulanPage from './lembur/LemburBulanPage';
-import ModalRoot from './modals/ModalRoot';
-import SbuGradePage from './settings/SbuGradePage';
-import Sidebar from './layout/Sidebar';
-import Toast from './layout/Toast';
-import Topbar from './layout/Topbar';
-import UploadPage from './upload/UploadPage';
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { initializeState } from "@/store/slices/hrisSlice";
+import { showToast } from "@/store/slices/uiSlice";
+import DashboardPage from "./dashboard/DashboardPage";
+import JabatanPage from "./settings/JabatanPage";
+import KaryawanPage from "./karyawan/KaryawanPage";
+import LaptopDashboardPage from "./laptop/LaptopDashboardPage";
+import LaptopTablePage from "./laptop/LaptopTablePage";
+import LemburBulanPage from "./lembur/LemburBulanPage";
+import ModalRoot from "./modals/ModalRoot";
+import SbuGradePage from "./settings/SbuGradePage";
+import Sidebar from "./layout/Sidebar";
+import Toast from "./layout/Toast";
+import Topbar from "./layout/Topbar";
+import UploadPage from "./upload/UploadPage";
 
 const PAGE_COMPONENTS = {
   dashboard: DashboardPage,
   karyawan: KaryawanPage,
   upload: UploadPage,
-  'lembur-bulan': LemburBulanPage,
-  'dashboard-laptop': LaptopDashboardPage,
+  "lembur-bulan": LemburBulanPage,
+  "dashboard-laptop": LaptopDashboardPage,
   laptop: LaptopTablePage,
   jabatan: JabatanPage,
-  'sbu-grade': SbuGradePage,
+  "sbu-grade": SbuGradePage,
 };
 
 export default function AppShell() {
@@ -39,17 +39,34 @@ export default function AppShell() {
 
     dispatch(initializeState())
       .unwrap()
-      .then(({ repairedIdCount, promotedToActiveCount }) => {
+      .then(({ repairedIdCount, promotedToActiveCount, syncedLaptopCount }) => {
         const notices = [];
         if (repairedIdCount > 0) {
-          notices.push(`🔧 ${repairedIdCount} data karyawan dengan ID duplikat berhasil diperbaiki otomatis.`);
+          notices.push(
+            `🔧 ${repairedIdCount} data karyawan dengan ID duplikat berhasil diperbaiki otomatis.`,
+          );
         }
         if (promotedToActiveCount > 0) {
-          notices.push(`🔄 ${promotedToActiveCount} karyawan otomatis diubah dari "Baru Masuk" menjadi "Aktif" (sudah genap 1 bulan)`);
+          notices.push(
+            `🔄 ${promotedToActiveCount} karyawan otomatis diubah dari "Baru Masuk" menjadi "Aktif" (sudah genap 1 bulan)`,
+          );
         }
-        if (notices.length) dispatch(showToast(notices.join(' '), 5000));
+        if (notices.length) dispatch(showToast(notices.join(" "), 5000));
+        if (syncedLaptopCount > 0) {
+          notices.push(
+            `💻 ${syncedLaptopCount} laptop otomatis diubah menjadi "Belum Dikembalikan" (karyawan Resign).`,
+          );
+        }
+        if (notices.length) dispatch(showToast(notices.join(" "), 5000));
       })
-      .catch(() => dispatch(showToast('❌ Gagal terhubung ke server database. Data tidak dapat dimuat.', 6000)));
+      .catch(() =>
+        dispatch(
+          showToast(
+            "❌ Gagal terhubung ke server database. Data tidak dapat dimuat.",
+            6000,
+          ),
+        ),
+      );
   }, [dispatch]);
 
   const ActivePage = PAGE_COMPONENTS[activePage];
