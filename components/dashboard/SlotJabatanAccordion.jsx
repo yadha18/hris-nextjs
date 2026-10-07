@@ -4,10 +4,11 @@ import { Fragment, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Button from "@/components/ui/Button";
 import DataTable, { Td } from "@/components/ui/DataTable";
+import DisclosureArrow from "@/components/ui/DisclosureArrow";
 import EmptyState from "@/components/ui/EmptyState";
 import { selectSlotSummary } from "@/lib/selectors";
+import { toggleSetMember } from "@/lib/utils";
 import { openModal } from "@/store/slices/uiSlice";
-import DisclosureArrow from "../ui/DisclosureArrow";
 
 const SLOT_TABLE_HEADERS = [
   "Jabatan",
