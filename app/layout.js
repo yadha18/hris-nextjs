@@ -13,7 +13,13 @@ const jetBrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-export const metadata = { title: "HRIS · Manajemen Jabatan Karyawan" };
+export const metadata = {
+  title: "HRIS · Manajemen Jabatan Karyawan",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+};
 
 const APPLY_SAVED_THEME_SCRIPT = `
   try {
