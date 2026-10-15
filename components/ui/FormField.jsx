@@ -1,5 +1,5 @@
 export const CONTROL_CLASS =
-  'w-full rounded-lg border border-line-strong bg-surface2 px-3 py-[9px] text-[13px] text-fg outline-none transition focus:border-accent read-only:cursor-not-allowed disabled:cursor-not-allowed';
+  'w-full rounded-lg border border-line-strong bg-surface2 px-3 py-[9px] text-[13px] text-fg outline-none transition focus:border-accent [&[readonly]]:cursor-not-allowed disabled:cursor-not-allowed';
 
 export function FormRow({ children }) {
   return <div className="flex flex-col md:flex-row md:gap-3.5">{children}</div>;

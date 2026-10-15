@@ -75,3 +75,14 @@
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
   border-radius: 6px;
 }
+
+@layer base {
+  button:not(:disabled),
+  [role="button"],
+  select,
+  summary,
+  input[type="file"],
+  input[type="date"] {
+    cursor: pointer;
+  }
+}
