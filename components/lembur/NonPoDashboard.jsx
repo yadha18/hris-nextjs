@@ -85,6 +85,11 @@ const NON_PO_COLUMNS = [
     render: (row) => formatRupiah(row.lemburRealization),
   },
   {
+    label: "Realisasi Detasering",
+    cellClass: MONEY_CELL,
+    render: (row) => formatRupiah(row.detaseringRealization),
+  },
+  {
     label: "Realisasi SPPD/Lembur",
     cellClass: `${MONEY_CELL} font-semibold`,
     render: (row) => formatRupiah(row.totalRealization),
@@ -136,7 +141,7 @@ export default function NonPoDashboard() {
         </div>
         <StatGrid desktopColumns={3}>
           <StatCard
-            label="Total Realisasi SPPD/Lembur"
+            label="Total Realisasi"
             value={formatRupiah(dashboard.totalRealization)}
             tone="accent"
           />
@@ -159,7 +164,7 @@ export default function NonPoDashboard() {
           ℹ️ Kolom <strong>PAGU Non PO</strong> dan <strong>BNLP</strong> diisi
           manual (nilai tahunan) — kolom lainnya dihitung otomatis.
         </p>
-        <DataTable headers={TABLE_HEADERS} minWidthClass="min-w-[1700px]">
+        <DataTable headers={TABLE_HEADERS} minWidthClass="min-w-[1950px]">
           {dashboard.rows.map((row) => (
             <tr key={row.sbuName} className="hover:bg-white/[0.02]">
               {NON_PO_COLUMNS.map(({ label, cellClass = "", render }) => (
