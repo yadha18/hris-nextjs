@@ -120,9 +120,9 @@ export default function Sidebar() {
         }`}
       >
         <NavSection label="Menu" items={MENU_ITEMS} activePage={activePage} onNavigate={handleNavigate} />
-        <NavSection label="Data Informasi Karyawan" items={EMPLOYEE_ITEMS} activePage={activePage} onNavigate={handleNavigate} />
+        <NavSection label="BLP" items={EMPLOYEE_ITEMS} activePage={activePage} onNavigate={handleNavigate} />
 
-        <NavLabel>Data Lembur dan SPPD Karyawan</NavLabel>
+        <NavLabel>BLNP</NavLabel>
         {lemburYears.map((year) => (
           <LemburYearGroup key={year} year={year} />
         ))}

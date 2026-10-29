@@ -14,6 +14,7 @@ import { selectLemburLog, selectNonPoDashboard } from "@/lib/selectors";
 import { formatRupiah } from "@/lib/utils";
 import { updateLemburSbuConfig } from "@/store/lemburActions";
 import { showToast } from "@/store/slices/uiSlice";
+import RealizationTracking from "./RealizationTracking";
 
 const MONEY_CELL = "font-mono text-xs";
 const COUNT_CELL = "text-center font-mono text-xs";
@@ -156,6 +157,7 @@ export default function NonPoDashboard() {
             tone="success"
           />
         </StatGrid>
+        <RealizationTracking />
       </Card>
 
       <Card>

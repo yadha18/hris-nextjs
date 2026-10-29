@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStateCollection } from "@/lib/mongodb";
+import { isUnauthorized } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic"; // jangan di-cache oleh Next.js
 
@@ -15,13 +16,8 @@ const DEFAULT_STATE = {
   tiketHPI: 0,
   laptop: [],
   subBidang: [],
+  lemburTracking: {},
 };
-
-function isUnauthorized(request) {
-  const requiredApiKey = process.env.API_KEY;
-  if (!requiredApiKey) return false;
-  return request.headers.get("x-api-key") !== requiredApiKey;
-}
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -77,6 +73,7 @@ export async function PUT(request) {
       tiketHPI,
       laptop,
       subBidang,
+      lemburTracking,
     } = body;
 
     if (![karyawan, jabatan, log].every(Array.isArray)) {
@@ -103,6 +100,10 @@ export async function PUT(request) {
           tiketHPI: Number(tiketHPI) || 0,
           laptop: asArray(laptop),
           subBidang: asArray(subBidang),
+          lemburTracking:
+            lemburTracking && typeof lemburTracking === "object"
+              ? lemburTracking
+              : {},
           updatedAt: new Date(),
         },
       },

@@ -81,6 +81,7 @@ const initialState = {
   loadStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
   isSaving: false,
   errorMessage: null,
+  lemburTracking: {},
 };
 
 const hrisSlice = createSlice({
@@ -208,6 +209,14 @@ const hrisSlice = createSlice({
       state.laptop = action.payload.laptops;
       state.log.push(...action.payload.logEntries);
     },
+    trackingStageUpdated(state, action) {
+      const { monthLabel, stageKey, entry, logEntry } = action.payload;
+      const monthTracking = { ...state.lemburTracking[monthLabel] };
+      if (entry) monthTracking[stageKey] = entry;
+      else delete monthTracking[stageKey];
+      state.lemburTracking[monthLabel] = monthTracking;
+      state.log.push(logEntry);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -237,6 +246,7 @@ const hrisSlice = createSlice({
         state.lemburSbuConfig = data.lemburSbuConfig || {};
         state.tiketHPI = Number(data.tiketHPI) || 0;
         state.loadStatus = "succeeded";
+        state.lemburTracking = data.lemburTracking || {};
       })
       .addCase(fetchState.rejected, (state, action) => {
         state.loadStatus = "failed";
@@ -274,6 +284,7 @@ export const {
   namedListItemAdded,
   namedListItemRemoved,
   laptopStatusesSynced,
+  trackingStageUpdated,
 } = hrisSlice.actions;
 
 // Pengganti UI.init(): muat data → rawat data → simpan jika ada perubahan

@@ -8,8 +8,8 @@ import LemburTableView from "./LemburTableView";
 import NonPoDashboard from "./NonPoDashboard";
 
 const VIEW_TABS = [
-  { key: "dashboard", label: "📈 Dashboard Non PO", Component: NonPoDashboard },
-  { key: "table", label: "🧾 Tabel Data", Component: LemburTableView },
+  { key: "dashboard", label: "📈 Dashboard Lembur, SPPD, Detasering", Component: NonPoDashboard },
+  { key: "table", label: "🧾 Tabel Lembur, SPPD, Detasering", Component: LemburTableView },
 ];
 
 export default function LemburBulanPage() {
