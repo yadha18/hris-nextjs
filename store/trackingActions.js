@@ -1,6 +1,7 @@
 import { createLogEntry } from "@/lib/models";
 import {
   deleteTrackingDocument,
+  persistTrackingStage,
   uploadTrackingDocument,
 } from "@/lib/trackingDocuments";
 import {
@@ -14,6 +15,7 @@ import { getTodayDate } from "@/lib/utils";
 import { saveState, trackingStageUpdated } from "@/store/slices/hrisSlice";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SUCCESS = { success: true };
 
 function resolveStage(state, monthLabel, stageKey) {
   const stageIndex = TRACKING_STAGES.findIndex(({ key }) => key === stageKey);
@@ -27,11 +29,19 @@ function resolveStage(state, monthLabel, stageKey) {
 
 const blockedMessage = ({ blockingStageLabel }) =>
   `Selesaikan "${blockingStageLabel}" terlebih dahulu.`;
+const failure = (errorMessage) => ({ success: false, errorMessage });
 
-function commitStage(
+// Simpan ke server dulu; tampilan & log baru berubah setelah server mengonfirmasi
+async function commitStage(
   dispatch,
   { monthLabel, stage, previousEntry, nextEntry, note },
 ) {
+  await persistTrackingStage({
+    monthLabel,
+    stageKey: stage.key,
+    entry: nextEntry,
+  });
+
   const logEntry = createLogEntry({
     nip: "SYSTEM",
     name: `${monthLabel} · ${stage.label}`,
@@ -50,27 +60,30 @@ function commitStage(
       logEntry,
     }),
   );
-  dispatch(saveState());
+  dispatch(saveState()); // hanya untuk menyimpan log; tracking sudah tersimpan di atas
 }
 
 export const completeCheckboxStage =
   ({ monthLabel, stageKey }) =>
-  (dispatch, getState) => {
+  async (dispatch, getState) => {
     const { stage, previousEntry, access } = resolveStage(
       getState(),
       monthLabel,
       stageKey,
     );
-    if (!access.canComplete)
-      return { success: false, errorMessage: blockedMessage(access) };
+    if (!access.canComplete) return failure(blockedMessage(access));
 
-    commitStage(dispatch, {
-      monthLabel,
-      stage,
-      previousEntry,
-      nextEntry: { date: getTodayDate() },
-    });
-    return { success: true };
+    try {
+      await commitStage(dispatch, {
+        monthLabel,
+        stage,
+        previousEntry,
+        nextEntry: { date: getTodayDate() },
+      });
+      return SUCCESS;
+    } catch (error) {
+      return failure(error.message);
+    }
   };
 
 export const uploadStageDocument =
@@ -82,57 +95,60 @@ export const uploadStageDocument =
       stageKey,
     );
     if (!access.isDone && !access.canComplete)
-      return { success: false, errorMessage: blockedMessage(access) };
+      return failure(blockedMessage(access));
 
     const fileError = validateTrackingFile(file);
-    if (fileError) return { success: false, errorMessage: fileError };
+    if (fileError) return failure(fileError);
 
+    let uploadedDocument = null;
     try {
-      const document = await uploadTrackingDocument(file);
-      commitStage(dispatch, {
+      uploadedDocument = await uploadTrackingDocument(file);
+      await commitStage(dispatch, {
         monthLabel,
         stage,
         previousEntry,
-        nextEntry: { date: getTodayDate(), document },
+        nextEntry: { date: getTodayDate(), document: uploadedDocument },
         note: previousEntry ? "Dokumen diganti" : undefined,
       });
       if (previousEntry?.document)
         deleteTrackingDocument(previousEntry.document.fileId);
       return { success: true, isReplacement: Boolean(previousEntry) };
     } catch (error) {
-      return { success: false, errorMessage: error.message };
+      if (uploadedDocument) deleteTrackingDocument(uploadedDocument.fileId); // file yatim bila tahap gagal tersimpan
+      return failure(error.message);
     }
   };
 
 // Membatalkan ceklis atau menghapus dokumen
 export const undoStage =
   ({ monthLabel, stageKey }) =>
-  (dispatch, getState) => {
+  async (dispatch, getState) => {
     const { stage, previousEntry, access } = resolveStage(
       getState(),
       monthLabel,
       stageKey,
     );
     if (!access.canUndo)
-      return {
-        success: false,
-        errorMessage: "Batalkan tahap setelahnya terlebih dahulu.",
-      };
+      return failure("Batalkan tahap setelahnya terlebih dahulu.");
 
-    commitStage(dispatch, {
-      monthLabel,
-      stage,
-      previousEntry,
-      nextEntry: null,
-    });
-    if (previousEntry.document)
-      deleteTrackingDocument(previousEntry.document.fileId);
-    return { success: true };
+    try {
+      await commitStage(dispatch, {
+        monthLabel,
+        stage,
+        previousEntry,
+        nextEntry: null,
+      });
+      if (previousEntry.document)
+        deleteTrackingDocument(previousEntry.document.fileId);
+      return SUCCESS;
+    } catch (error) {
+      return failure(error.message);
+    }
   };
 
 export const changeStageDate =
   ({ monthLabel, stageKey, date }) =>
-  (dispatch, getState) => {
+  async (dispatch, getState) => {
     const { stage, previousEntry } = resolveStage(
       getState(),
       monthLabel,
@@ -143,13 +159,18 @@ export const changeStageDate =
       !DATE_PATTERN.test(date) ||
       date === previousEntry.date
     )
-      return;
+      return SUCCESS;
 
-    commitStage(dispatch, {
-      monthLabel,
-      stage,
-      previousEntry,
-      nextEntry: { ...previousEntry, date },
-      note: "Tanggal diubah manual",
-    });
+    try {
+      await commitStage(dispatch, {
+        monthLabel,
+        stage,
+        previousEntry,
+        nextEntry: { ...previousEntry, date },
+        note: "Tanggal diubah manual",
+      });
+      return SUCCESS;
+    } catch (error) {
+      return failure(error.message);
+    }
   };

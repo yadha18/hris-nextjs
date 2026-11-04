@@ -61,19 +61,25 @@ function UploadButton({ label, disabled, onFileSelected }) {
   );
 }
 
-function StageControls({ stage, entry, access, isUploading, handlers }) {
+function StageControls({ stage, entry, access, isBusy, handlers }) {
   const { isDone, canComplete, canUndo, blockingStageLabel } = access;
+  const waitingHint = !isDone && !canComplete && (
+    <div className="text-[10px] text-fg-subtle">
+      Menunggu: {blockingStageLabel}
+    </div>
+  );
   const dateInput = entry && (
     <TextControl
       type="date"
       value={entry.date}
+      disabled={isBusy}
       onChange={(event) => handlers.changeDate(event.target.value)}
       className="w-[140px] px-2 py-1 text-xs"
     />
   );
 
   if (stage.kind === "checkbox") {
-    const isDisabled = isDone ? !canUndo : !canComplete;
+    const isDisabled = isBusy || (isDone ? !canUndo : !canComplete);
     return (
       <>
         <label
@@ -87,63 +93,55 @@ function StageControls({ stage, entry, access, isUploading, handlers }) {
             onChange={(event) => handlers.toggleCheckbox(event.target.checked)}
             className="h-4 w-4 accent-success"
           />
-          {isDone ? "Selesai" : "Tandai selesai"}
+          {isBusy ? "Menyimpan..." : isDone ? "Selesai" : "Tandai selesai"}
         </label>
         {dateInput}
-        {!isDone && !canComplete && (
-          <div className="text-[10px] text-fg-subtle">
-            Menunggu: {blockingStageLabel}
-          </div>
-        )}
+        {waitingHint}
+      </>
+    );
+  }
+
+  if (!isDone) {
+    return (
+      <>
+        <UploadButton
+          label={isBusy ? "Mengupload..." : "⬆ Upload Dokumen"}
+          disabled={!canComplete || isBusy}
+          onFileSelected={handlers.upload}
+        />
+        {waitingHint}
       </>
     );
   }
 
   return (
     <>
-      {isDone ? (
-        <>
-          <a
-            href={getTrackingDocumentUrl(entry.document.fileId)}
-            target="_blank"
-            rel="noreferrer"
-            title={entry.document.fileName}
-            className="max-w-[170px] truncate text-xs text-accent-light"
-          >
-            📎 {entry.document.fileName}
-          </a>
-          {dateInput}
-          <div className="flex gap-1.5">
-            <UploadButton
-              label={isUploading ? "Mengupload..." : "↻ Ganti"}
-              disabled={isUploading}
-              onFileSelected={handlers.upload}
-            />
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={!canUndo || isUploading}
-              title={canUndo ? undefined : UNDO_BLOCKED_HINT}
-              onClick={handlers.undo}
-            >
-              🗑 Hapus
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <UploadButton
-            label={isUploading ? "Mengupload..." : "⬆ Upload Dokumen"}
-            disabled={!canComplete || isUploading}
-            onFileSelected={handlers.upload}
-          />
-          {!canComplete && (
-            <div className="text-[10px] text-fg-subtle">
-              Menunggu: {blockingStageLabel}
-            </div>
-          )}
-        </>
-      )}
+      <a
+        href={getTrackingDocumentUrl(entry.document.fileId)}
+        target="_blank"
+        rel="noreferrer"
+        title={entry.document.fileName}
+        className="max-w-[170px] truncate text-xs text-accent-light"
+      >
+        📎 {entry.document.fileName}
+      </a>
+      {dateInput}
+      <div className="flex gap-1.5">
+        <UploadButton
+          label={isBusy ? "Mengupload..." : "↻ Ganti"}
+          disabled={isBusy}
+          onFileSelected={handlers.upload}
+        />
+        <Button
+          variant="danger"
+          size="sm"
+          disabled={!canUndo || isBusy}
+          title={canUndo ? undefined : UNDO_BLOCKED_HINT}
+          onClick={handlers.undo}
+        >
+          🗑 Hapus
+        </Button>
+      </div>
     </>
   );
 }
@@ -153,7 +151,7 @@ export default function RealizationTracking() {
   const selectedMonth = useSelector((state) => state.ui.selectedBulan);
   const tracking = useSelector(selectSelectedMonthTracking);
   const [isOpen, setIsOpen] = useState(false);
-  const [uploadingStageKey, setUploadingStageKey] = useState(null);
+  const [busyStageKey, setBusyStageKey] = useState(null);
 
   const completedCount = countCompletedStages(tracking);
   const isAllCompleted = completedCount === TRACKING_STAGES.length;
@@ -162,38 +160,47 @@ export default function RealizationTracking() {
     if (!result.success) dispatch(showToast(`❌ ${result.errorMessage}`, 5000));
   };
 
-  const createHandlers = (stageKey) => ({
-    toggleCheckbox: (shouldComplete) =>
-      reportFailure(
-        dispatch(
-          shouldComplete
-            ? completeCheckboxStage({ monthLabel: selectedMonth, stageKey })
-            : undoStage({ monthLabel: selectedMonth, stageKey }),
+  const runWithBusy = async (stageKey, action) => {
+    setBusyStageKey(stageKey);
+    const result = await action();
+    setBusyStageKey(null);
+    return result;
+  };
+
+  const createHandlers = (stageKey) => {
+    const target = { monthLabel: selectedMonth, stageKey };
+    return {
+      toggleCheckbox: async (shouldComplete) =>
+        reportFailure(
+          await runWithBusy(stageKey, () =>
+            dispatch(
+              shouldComplete
+                ? completeCheckboxStage(target)
+                : undoStage(target),
+            ),
+          ),
         ),
-      ),
-    undo: () =>
-      reportFailure(
-        dispatch(undoStage({ monthLabel: selectedMonth, stageKey })),
-      ),
-    changeDate: (date) =>
-      dispatch(changeStageDate({ monthLabel: selectedMonth, stageKey, date })),
-    upload: async (file) => {
-      setUploadingStageKey(stageKey);
-      const result = await dispatch(
-        uploadStageDocument({ monthLabel: selectedMonth, stageKey, file }),
-      );
-      setUploadingStageKey(null);
-      if (result.success)
+      undo: async () =>
+        reportFailure(
+          await runWithBusy(stageKey, () => dispatch(undoStage(target))),
+        ),
+      changeDate: async (date) =>
+        reportFailure(await dispatch(changeStageDate({ ...target, date }))),
+      upload: async (file) => {
+        const result = await runWithBusy(stageKey, () =>
+          dispatch(uploadStageDocument({ ...target, file })),
+        );
+        if (!result.success) return reportFailure(result);
         dispatch(
           showToast(
             result.isReplacement
-              ? "✅ Dokumen berhasil diganti"
-              : "✅ Dokumen berhasil diupload",
+              ? "✅ Dokumen berhasil diganti dan tersimpan"
+              : "✅ Dokumen berhasil diupload dan tersimpan",
           ),
         );
-      else reportFailure(result);
-    },
-  });
+      },
+    };
+  };
 
   return (
     <div className="rounded-xl border border-line bg-surface2">
@@ -252,7 +259,7 @@ export default function RealizationTracking() {
                     stage={stage}
                     entry={entry}
                     access={access}
-                    isUploading={uploadingStageKey === stage.key}
+                    isBusy={busyStageKey === stage.key}
                     handlers={createHandlers(stage.key)}
                   />
                 </div>

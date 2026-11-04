@@ -16,7 +16,6 @@ const DEFAULT_STATE = {
   tiketHPI: 0,
   laptop: [],
   subBidang: [],
-  lemburTracking: {},
 };
 
 function asArray(value) {
@@ -73,7 +72,6 @@ export async function PUT(request) {
       tiketHPI,
       laptop,
       subBidang,
-      lemburTracking,
     } = body;
 
     if (![karyawan, jabatan, log].every(Array.isArray)) {
@@ -100,10 +98,6 @@ export async function PUT(request) {
           tiketHPI: Number(tiketHPI) || 0,
           laptop: asArray(laptop),
           subBidang: asArray(subBidang),
-          lemburTracking:
-            lemburTracking && typeof lemburTracking === "object"
-              ? lemburTracking
-              : {},
           updatedAt: new Date(),
         },
       },
