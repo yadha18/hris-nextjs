@@ -18,6 +18,7 @@ import { selectLemburLog, selectSelectedMonthLembur } from "@/lib/selectors";
 import { formatRupiah } from "@/lib/utils";
 import usePagination from "@/hooks/usePagination";
 import { openModal, showToast } from "@/store/slices/uiSlice";
+import { filterLogForMonth } from "@/lib/lemburService";
 
 const INITIAL_FILTERS = { searchText: "", sbu: "", billingType: "" };
 const TABLE_HEADERS = [
@@ -84,7 +85,7 @@ export default function LemburTableView() {
       );
     await exportLemburEntries({
       entries: monthEntries,
-      logEntries: lemburLog,
+      logEntries: filterLogForMonth(lemburLog, selectedMonth),
       monthLabel: selectedMonth,
     });
     dispatch(showToast("✅ Excel berhasil diexport!"));
