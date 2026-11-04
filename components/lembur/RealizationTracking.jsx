@@ -19,6 +19,7 @@ import {
   undoStage,
   uploadStageDocument,
 } from "@/store/trackingActions";
+import DocumentPreviewModal, { DownloadLink } from "./DocumentPreviewModal";
 
 const UNDO_BLOCKED_HINT = "Batalkan tahap setelahnya terlebih dahulu";
 
@@ -116,17 +117,24 @@ function StageControls({ stage, entry, access, isBusy, handlers }) {
 
   return (
     <>
-      <a
-        href={getTrackingDocumentUrl(entry.document.fileId)}
-        target="_blank"
-        rel="noreferrer"
-        title={entry.document.fileName}
-        className="max-w-[170px] truncate text-xs text-accent-light"
+      <button
+        type="button"
+        title={`Pratinjau ${entry.document.fileName}`}
+        onClick={() => handlers.preview(entry.document)}
+        className="max-w-[170px] cursor-pointer truncate text-xs text-accent-light"
       >
         📎 {entry.document.fileName}
-      </a>
+      </button>
       {dateInput}
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5 md:justify-center">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => handlers.preview(entry.document)}
+        >
+          👁 Preview
+        </Button>
+        <DownloadLink documentInfo={entry.document} />
         <UploadButton
           label={isBusy ? "Mengupload..." : "↻ Ganti"}
           disabled={isBusy}
@@ -152,6 +160,7 @@ export default function RealizationTracking() {
   const tracking = useSelector(selectSelectedMonthTracking);
   const [isOpen, setIsOpen] = useState(false);
   const [busyStageKey, setBusyStageKey] = useState(null);
+  const [previewDocument, setPreviewDocument] = useState(null);
 
   const completedCount = countCompletedStages(tracking);
   const isAllCompleted = completedCount === TRACKING_STAGES.length;
@@ -199,75 +208,84 @@ export default function RealizationTracking() {
           ),
         );
       },
+      preview: (documentInfo) => setPreviewDocument(documentInfo),
     };
   };
 
   return (
-    <div className="rounded-xl border border-line bg-surface2">
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((previous) => !previous)}
-        className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3 text-left"
-      >
-        <DisclosureArrow isOpen={isOpen} />
-        <span className="flex-1 text-[13px] font-semibold">
-          Tracking Proses Penagihan - {selectedMonth}
-        </span>
-        <span
-          className={`text-xs font-semibold ${isAllCompleted ? "text-success" : "text-fg-muted"}`}
+    <>
+      <div className="rounded-xl border border-line bg-surface2">
+        <button
+          type="button"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((previous) => !previous)}
+          className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3 text-left"
         >
-          {completedCount} dari {TRACKING_STAGES.length} tahap selesai
-        </span>
-      </button>
+          <DisclosureArrow isOpen={isOpen} />
+          <span className="flex-1 text-[13px] font-semibold">
+            Tracking Proses Penagihan - {selectedMonth}
+          </span>
+          <span
+            className={`text-xs font-semibold ${isAllCompleted ? "text-success" : "text-fg-muted"}`}
+          >
+            {completedCount} dari {TRACKING_STAGES.length} tahap selesai
+          </span>
+        </button>
 
-      {isOpen && (
-        <ol className="m-0 flex list-none flex-col px-4 pb-5 pt-2 md:flex-row md:gap-2">
-          {TRACKING_STAGES.map((stage, stageIndex) => {
-            const entry = tracking[stage.key];
-            const access = getStageAccess(tracking, stageIndex);
-            const isLastStage = stageIndex === TRACKING_STAGES.length - 1;
+        {isOpen && (
+          <ol className="m-0 flex list-none flex-col px-4 pb-5 pt-2 md:flex-row md:gap-2">
+            {TRACKING_STAGES.map((stage, stageIndex) => {
+              const entry = tracking[stage.key];
+              const access = getStageAccess(tracking, stageIndex);
+              const isLastStage = stageIndex === TRACKING_STAGES.length - 1;
 
-            return (
-              <li
-                key={stage.key}
-                className="relative flex gap-3 pb-6 md:flex-1 md:flex-col md:items-center md:pb-0 md:text-center"
-              >
-                {!isLastStage && (
-                  <span
-                    aria-hidden
-                    className={`absolute bottom-0 left-[23px] top-12 w-0.5 md:bottom-auto md:left-1/2 md:top-6 md:h-0.5 md:w-full ${
-                      access.isDone ? "bg-success" : "bg-line-strong"
-                    }`}
-                  />
-                )}
-                <StageCircle
-                  icon={stage.icon}
-                  isDone={access.isDone}
-                  isCurrent={access.canComplete}
-                />
-                <div className="flex min-w-0 flex-col gap-1.5 md:items-center">
-                  <div className="text-[13px] font-semibold leading-tight">
-                    {stage.label}
-                  </div>
-                  {stage.description && (
-                    <div className="-mt-1 text-[11px] text-fg-muted">
-                      {stage.description}
-                    </div>
+              return (
+                <li
+                  key={stage.key}
+                  className="relative flex gap-3 pb-6 md:flex-1 md:flex-col md:items-center md:pb-0 md:text-center"
+                >
+                  {!isLastStage && (
+                    <span
+                      aria-hidden
+                      className={`absolute bottom-0 left-[23px] top-12 w-0.5 md:bottom-auto md:left-1/2 md:top-6 md:h-0.5 md:w-full ${
+                        access.isDone ? "bg-success" : "bg-line-strong"
+                      }`}
+                    />
                   )}
-                  <StageControls
-                    stage={stage}
-                    entry={entry}
-                    access={access}
-                    isBusy={busyStageKey === stage.key}
-                    handlers={createHandlers(stage.key)}
+                  <StageCircle
+                    icon={stage.icon}
+                    isDone={access.isDone}
+                    isCurrent={access.canComplete}
                   />
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                  <div className="flex min-w-0 flex-col gap-1.5 md:items-center">
+                    <div className="text-[13px] font-semibold leading-tight">
+                      {stage.label}
+                    </div>
+                    {stage.description && (
+                      <div className="-mt-1 text-[11px] text-fg-muted">
+                        {stage.description}
+                      </div>
+                    )}
+                    <StageControls
+                      stage={stage}
+                      entry={entry}
+                      access={access}
+                      isBusy={busyStageKey === stage.key}
+                      handlers={createHandlers(stage.key)}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+      {previewDocument && (
+        <DocumentPreviewModal
+          documentInfo={previewDocument}
+          onClose={() => setPreviewDocument(null)}
+        />
       )}
-    </div>
+    </>
   );
 }

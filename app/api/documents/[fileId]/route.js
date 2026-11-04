@@ -26,10 +26,15 @@ export async function GET(request, { params }) {
     for await (const chunk of bucket.openDownloadStream(objectId))
       chunks.push(chunk);
 
+    const isDownload =
+      new URL(request.url).searchParams.get("download") === "1";
+    const dispositionType = isDownload ? "attachment" : "inline";
+
     return new Response(Buffer.concat(chunks), {
       headers: {
         "Content-Type": fileInfo.contentType || "application/octet-stream",
-        "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(fileInfo.filename)}`,
+        "Content-Disposition": `${dispositionType}; filename*=UTF-8''${encodeURIComponent(fileInfo.filename)}`,
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
